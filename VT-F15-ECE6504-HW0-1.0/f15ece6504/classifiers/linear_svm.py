@@ -22,7 +22,14 @@ def svm_loss_vectorized(W, X, y, reg):
   # Implement a vectorized version of the structured SVM loss, storing the    #
   # result in loss.                                                           #
   #############################################################################
-  pass
+  flat = X.reshape(3072,50000)
+  loss_array = W.dot(flat)
+  print(loss_array.shape)
+  print(y.shape)
+  
+  
+
+
   #############################################################################
   #                             END OF YOUR CODE                              #
   #############################################################################
@@ -37,7 +44,7 @@ def svm_loss_vectorized(W, X, y, reg):
   # to reuse some of the intermediate values that you used to compute the     #
   # loss.                                                                     #
   #############################################################################
-  pass
+  
   #############################################################################
   #                             END OF YOUR CODE                              #
   #############################################################################

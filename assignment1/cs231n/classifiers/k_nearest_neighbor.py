@@ -77,7 +77,8 @@ class KNearestNeighbor(object):
                 #####################################################################
                 # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-                pass
+                dists[i,j] = (np.sum(abs(X[i] - self.X_train[j])**2))**0.5
+                
 
                 # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         return dists
@@ -164,7 +165,8 @@ class KNearestNeighbor(object):
             #########################################################################
             # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-            pass
+            row_i_sorted = self.y_train[dists[i].argsort()]
+            closest_y = row_i_sorted[:k]
 
             # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
             #########################################################################
@@ -175,9 +177,10 @@ class KNearestNeighbor(object):
             # label.                                                                #
             #########################################################################
             # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-
-            pass
+            closest_y[closest_y==''] = 0
+            closest_y = closest_y.astype(np.int)
+            y_pred[i] = str(np.argmax(np.bincount(closest_y)))
 
             # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-
+        
         return y_pred
