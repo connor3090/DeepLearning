@@ -22,7 +22,7 @@ def svm_loss_naive(W, X, y, reg):
     - gradient with respect to weights W; an array of same shape as W
     """
     dW = np.zeros(W.shape) # initialize the gradient as zero
-
+    h = 0.00001
     # compute the loss and the gradient
     num_classes = W.shape[1]
     num_train = X.shape[0]
