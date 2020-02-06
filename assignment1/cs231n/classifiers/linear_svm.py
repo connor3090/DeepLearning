@@ -120,6 +120,7 @@ def svm_loss_vectorized(W, X, y, reg):
     x_t = X.transpose() 
     dW = x_t.dot(without_negatives)
     dW /= num_rows
+    dW += reg * W
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
