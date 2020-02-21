@@ -33,7 +33,28 @@ def softmax_loss_naive(W, X, y, reg):
     #############################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    dW = np.zeros(W.shape) # initialize the gradient as zero
+    h = 0.00001
+    # compute the loss and the gradient
+    num_classes = W.shape[1] # C, 1 is columns
+    num_train = X.shape[0] # N, 0 is rows
+    loss = 0.0
+    for i in range(num_train):
+      # Normalize the scores to prevent numeric instability
+      scores = X[i].dot(W)        
+      scores -= np.max(scores)        
+      p = np.exp(scores) / np.sum(np.exp(scores))      
+      correct_class_score = p[y[i]]
+      loss += -np.log(correct_class_score)
+      for j in range(num_classes):
+        dW[:,j] += X[i] * p[j]
+      dW[:,y[i]] -= X[i]
+    loss /= num_train
+    loss += reg * np.sum(W*W)
+
+    dW /= num_train
+    dW += reg * 2 * W
+            
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
@@ -57,9 +78,20 @@ def softmax_loss_vectorized(W, X, y, reg):
     # regularization!                                                           #
     #############################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
+    
+    scores = X.dot(W)
+    num_rows = scores.shape[0]
+    scores -= np.max(scores, axis=1).reshape(num_rows,1)
+    p = np.exp(scores) / np.sum(np.exp(scores), axis = 1).reshape(num_rows,1)
+    correct_p = p[(np.arange(num_rows)),(y)]
+    log_p = np.log(correct_p)
+    loss = -np.sum(log_p) / num_rows
+    loss += reg * np.sum(W*W)
 
-    pass
+    p[np.arange(num_rows),y] -= 1
+    dW = X.transpose().dot(p)
+    dW /= num_rows
+    dW += reg * 2 * W
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-
     return loss, dW
