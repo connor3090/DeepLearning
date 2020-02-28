@@ -172,6 +172,7 @@ def batchnorm_forward(x, gamma, beta, bn_param):
     mode = bn_param['mode']
     eps = bn_param.get('eps', 1e-5)
     momentum = bn_param.get('momentum', 0.9)
+    layernorm = bn_param.get('layernom', 0)
 
     N, D = x.shape
     running_mean = bn_param.get('running_mean', np.zeros(D, dtype=x.dtype))
@@ -202,7 +203,22 @@ def batchnorm_forward(x, gamma, beta, bn_param):
         #######################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-        pass
+        
+
+        avg = np.mean(x, axis=0)
+        var = np.var(x, axis=0) + eps
+        root_var = np.sqrt(var)
+        new_x = (x - avg) / root_var
+        out = new_x * gamma + beta
+        running_mean = momentum * running_mean + (1 - momentum) * avg
+        running_var = momentum * running_var + (1 - momentum) * var
+        bn_param['running_mean'] = running_mean
+        bn_param['running_var'] = running_var
+        cache = (x, avg, var, gamma, new_x, layernorm, root_var)
+
+
+
+
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         #######################################################################
@@ -217,7 +233,7 @@ def batchnorm_forward(x, gamma, beta, bn_param):
         #######################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-        pass
+        out = gamma * (x - running_mean) / np.sqrt(running_var + eps) + beta
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         #######################################################################
@@ -243,7 +259,7 @@ def batchnorm_backward(dout, cache):
 
     Inputs:
     - dout: Upstream derivatives, of shape (N, D)
-    - cache: Variable of intermediates from batchnorm_forward.
+    - cache: Variable of intermediates from batchnorm_forward. (x, mu, var, gamma, new_x, layernorm)
 
     Returns a tuple of:
     - dx: Gradient with respect to inputs x, of shape (N, D)
@@ -258,8 +274,19 @@ def batchnorm_backward(dout, cache):
     # might prove to be helpful.                                              #
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
+    N = 1.0 * dout.shape[0]
+    x, avg, var, gamma, new_x, ax, std = cache
+    dbeta = dout.sum(axis=ax)
+    dgamma = np.sum(dout * new_x, axis=ax)
+    fz = dout * gamma
+    ux = 1/N
+    vx = (2 / N) * (x - avg)
+    zx = 1 / std
+    zu = -1 / std
+    zv = -0.5 * (var**-1.5)*(x - avg)
+    vu = -2 / N * np.sum(x - avg, axis=0)
+    dx = fz * zx + np.sum(fz*zu, axis=0)*ux + np.sum(fz*zv, axis=0)*(vx+vu+ux)
 
-    pass
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
