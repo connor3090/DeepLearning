@@ -698,8 +698,8 @@ def conv_backward_naive(dout, cache):
         doutp = np.pad(dout[i,j], dpadH)
         for c in range(C):
           filt = w_[j,c]
-          print('doutp shape: ', doutp.shape)
-          print('filt shape:  ', filt.shape)
+          #print('doutp shape: ', doutp.shape)
+          #print('filt shape:  ', filt.shape)
           for k in range(H):
             for l in range(W):
               ks = stride * k
