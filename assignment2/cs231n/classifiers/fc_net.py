@@ -197,23 +197,25 @@ class FullyConnectedNet(object):
 
         self.params['W1'] = weight_scale * np.random.randn(input_dim, hidden_dims[0])
         self.params['b1'] = np.zeros(hidden_dims[0])
-        #self.params['gamma1'] = np.ones(hidden_dims[0])
-        #self.params['beta1'] = np.zeros(hidden_dims[0])
-        f = ''
+        if self.normalization == 'batchnorm':
+          self.params['gamma1'] = np.ones(hidden_dims[0])
+          self.params['beta1'] = np.zeros(hidden_dims[0])
+        f = 1
         for i in range(1, len(hidden_dims)):
-          f = i+1
+          f += 1
           wKey = 'W' + str(f)
           bKey = 'b' + str(f)
           gKey = 'gamma' + str(f)
           betaKey = 'beta' + str(f)
           self.params[wKey] = weight_scale * np.random.randn(hidden_dims[i-1], hidden_dims[i])
           self.params[bKey] = np.zeros(hidden_dims[i])
-          #self.params[gKey] = np.ones(hidden_dims[i])
-          #self.params[betaKey] = np.zeros(hidden_dims[i])
+          if self.normalization == 'batchnorm':
+            self.params[gKey] = np.ones(hidden_dims[i])
+            self.params[betaKey] = np.zeros(hidden_dims[i])
           
         wKey = 'W' + str(f+1)
         bKey = 'b' + str(f+1)
-        self.params[wKey] = weight_scale * np.random.randn(hidden_dims[i], num_classes)
+        self.params[wKey] = weight_scale * np.random.randn(hidden_dims[f-1], num_classes)
         self.params[bKey] = np.zeros(num_classes)
 
 
@@ -290,8 +292,16 @@ class FullyConnectedNet(object):
           b = self.params['b'+str(i+1)]
           a, af_cache = affine_forward(x, w, b)
           caches.append(af_cache)
+          if self.normalization == 'batchnorm':
+            gamma = self.params['gamma'+str(i+1)]
+            beta = self.params['beta'+str(i+1)]
+            a, b_cache = batchnorm_forward(a, gamma, beta, self.bn_params[i])
+            caches.append(b_cache)
           x, re_cache = relu_forward(a)
           caches.append(re_cache)
+          if self.use_dropout:
+            x, drop_cache = dropout_forward(x, self.dropout_param)
+            caches.append(drop_cache)
           sum_l2 += np.sum(w * w)
         
         w = self.params['W'+str(self.num_layers)]
@@ -338,7 +348,14 @@ class FullyConnectedNet(object):
 
 
         for i in range(self.num_layers - 1, 0, -1):
+          
+          if self.use_dropout:
+            dx = dropout_backward(dx, caches.pop())
           da = relu_backward(dx, caches.pop())
+          if self.normalization == 'batchnorm':
+            da, dgamma, dbeta = batchnorm_backward(da, caches.pop())
+            grads['gamma'+str(i)] = dgamma
+            grads['beta'+str(i)] = dbeta
           dx, dw, db = affine_backward(da, caches.pop())
           grads['W'+str(i)] = dw + self.reg * self.params['W'+str(i)]
           grads['b'+str(i)] = db
