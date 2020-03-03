@@ -24,8 +24,8 @@ def svm_loss_vectorized(W, X, y, reg):
   #############################################################################
   flat = X.reshape(3072,50000)
   loss_array = W.dot(flat)
-  print(loss_array.shape)
-  print(y.shape)
+  #print(loss_array.shape)
+  #print(y.shape)
   
   
 

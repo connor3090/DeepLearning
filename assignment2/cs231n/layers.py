@@ -655,9 +655,9 @@ def conv_backward_naive(dout, cache):
     dW = dout.shape[3]
     N, F, out_H, out_W = dout.shape
     db = dout.sum(axis=(0,2,3))
-    print('dout shape : ', dout.shape)
-    print('x shape    : ', x.shape)
-    print('w shape    : ', w.shape)
+    #print('dout shape : ', dout.shape)
+    #print('x shape    : ', x.shape)
+    #print('w shape    : ', w.shape)
 
     # X = x
     # if pad > 0:
@@ -685,7 +685,7 @@ def conv_backward_naive(dout, cache):
               dw[k,j,l,m] += np.sum(z)
 
     dx = np.zeros(x.shape)
-    dxp = np.pad(dx, ((0,),(0,),(pad,),(pad,)), 'constant')
+    dxp = np.pad(dx, ((0,),(0,),(pad,),(pad,)))
     dpadH = ((dH - 1) * stride - dH + HH) // 2
     w_ = np.zeros_like(w)
     for i in range(HH):
@@ -693,6 +693,27 @@ def conv_backward_naive(dout, cache):
             w_[:, :, i, j] = w[:, :, HH-i-1, WW-j-1]
     
 
+    ###########
+    # dx = np.zeros_like(x)
+    # for i in range(N):
+    #   dxp = np.zeros(x[i].shape)
+    #   dxp = np.pad(dxp, [(0, 0), (pad, pad), (pad, pad)])
+    #   for j in range(F):
+    #     filt = w_[j]
+    #     for k in range(out_H):
+    #       ks = stride * k
+    #       for l in range(out_W):
+    #         ls = stride * l
+    #         #window = X[:, ks:ks+HH, ls:ls+WW]
+    #         #z = window * filt
+    #         #z_sum = np.sum(z)
+    #         add = dout[i, j, k, l]
+    #         for a in range(dxp.shape[0]):
+    #           for b in range(HH):
+    #             for c in range(WW):
+    #               dxp[a,ks+b,ls+c] += add * filt[a,b,c]
+    #         dx[i] += dxp[:,pad:-pad,pad:-pad]
+    ###########
     for i in range(N):
       for j in range(F):
         doutp = np.pad(dout[i,j], dpadH)
@@ -857,7 +878,10 @@ def spatial_batchnorm_forward(x, gamma, beta, bn_param):
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    N, C, H, W = x.shape
+    x = x.transpose(0, 2, 3, 1).reshape(N*H*W, C)
+    out, cache = batchnorm_forward(x, gamma, beta, bn_param)
+    out = out.reshape(N, H, W, C).transpose(0, 3, 1, 2)
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
@@ -891,7 +915,10 @@ def spatial_batchnorm_backward(dout, cache):
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    N, C, H, W = dout.shape
+    dout = dout.transpose(0, 2, 3, 1).reshape(N*H*W, C)
+    dx, dgamma, dbeta = batchnorm_backward_alt(dout, cache)
+    dx = dx.reshape(N, H, W, C).transpose(0, 3, 1, 2)
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
@@ -931,7 +958,18 @@ def spatial_groupnorm_forward(x, gamma, beta, G, gn_param):
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    N, C, H, W = x.shape
+    size = (N*G, C//G * H*W)
+    x = x.reshape(size).transpose()
+    gamma = gamma.reshape(1, C, 1, 1)
+    beta = beta.reshape(1, C, 1, 1)
+    mu = x.mean(axis=0)
+    var = x.var(axis=0) + eps
+    std = np.sqrt(var)
+    z = (x - mu)/std
+    z = z.transpose().reshape(N, C, H, W)
+    out = gamma * z + beta
+    cache = {'std': std, 'gamma': gamma, 'z': z, 'size': size}
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
@@ -961,7 +999,21 @@ def spatial_groupnorm_backward(dout, cache):
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    N, C, H, W = dout.shape
+    size = cache['size']
+    gamma = cache['gamma']
+    std = cache['std']
+    z = cache['z'].reshape(size).transpose()
+    dbeta = dout.sum(axis=(0, 2, 3), keepdims=True)
+    dgamma = np.sum(dout * cache['z'], axis=(0, 2, 3), keepdims=True)
+
+    
+    M = z.shape[0]
+    dfdz = dout * gamma
+    dfdz = dfdz.reshape(size).T
+    dfdz_sum = np.sum(dfdz, axis=0)
+    dx = (dfdz - dfdz_sum/M - np.sum(dfdz * z, axis=0) * z/M) / std
+    dx = dx.transpose().reshape(N, C, H, W)
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################

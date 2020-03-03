@@ -55,20 +55,16 @@ class ThreeLayerConvNet(object):
         ############################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         # conv - relu - 2x2 max pool - affine - relu - affine - softmax
-        F = num_filters
-        C = input_dim[0]
-        H = input_dim[1]
-        W = input_dim[2]
-        HH = filter_size
-        WW = filter_size
-        self.params['W1'] = weight_scale * np.random.randn(F, C, HH, WW)
-        self.params['b1'] = np.zeros(F)
-
-        Hp = 1 + (H - 2) // 2
-        Wp = 1 + (W - 2) // 2
-        self.params['W2'] = weight_scale * np.random.randn(F * Hp * Wp, hidden_dim)
+        C, H, W = input_dim
+        HP, WP = 1 + (H - 2)//2, 1 + (W - 2)//2  # max pooling
+        self.params['W1'] = weight_scale * \
+            np.random.randn(num_filters, C, filter_size, filter_size)
+        self.params['b1'] = np.zeros(num_filters)
+        self.params['W2'] = weight_scale * \
+            np.random.randn(num_filters*HP*WP, hidden_dim)
         self.params['b2'] = np.zeros(hidden_dim)
-        self.params['W3'] = weight_scale * np.random.randn(hidden_dim, num_classes)
+        self.params['W3'] = weight_scale * \
+            np.random.randn(hidden_dim, num_classes)
         self.params['b3'] = np.zeros(num_classes)
 
 
@@ -111,23 +107,10 @@ class ThreeLayerConvNet(object):
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         # conv - relu - 2x2 max pool - affine - relu - affine - softmax
 
-        # Convolutional layer forward
-        out_conv, cache_conv = conv_forward_fast(X, W1, b1, conv_param)
-
-        # Relu1 forward
-        out_relu1, cache_relu1 = relu_forward(out_conv)
-
-        # Max Pool forward
-        out_max_pool, cache_max_pool = max_pool_forward_fast(out_relu1, pool_param)
-
-        # Affine1 forward
-        out_affine1, cache_affine1 = affine_forward(out_max_pool, W2, b2)
-
-        # Relu2 forward
-        out_relu2, cache_relu2 = relu_forward(out_affine1)
-
-        # Affine2 forward
-        out_affine2, cache_affine2 = affine_forward(out_relu2, W3, b3)
+        pool_out, cache = conv_relu_pool_forward(
+            X, W1, b1, conv_param, pool_param)
+        X2, fc_cache = affine_relu_forward(pool_out, W2, b2)
+        scores, fc2_cache = affine_forward(X2, W3, b3)
 
 
         
@@ -154,33 +137,21 @@ class ThreeLayerConvNet(object):
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         # conv - relu - 2x2 max pool - affine - relu - affine - softmax
 
-        # Softmax and L2 Regularization
-        loss, soft_grad = softmax_loss(out_affine2, y)
-        loss += 0.5 * self.reg * (np.sum(W1 * W1) + np.sum(W2 * W2) + np.sum(W3 * W3))
+        loss, softmax_grad = softmax_loss(scores, y)
+        loss += 0.5 * self.reg * np.sum(W1 * W1)
+        loss += 0.5 * self.reg * np.sum(W2 * W2)
+        loss += 0.5 * self.reg * np.sum(W3 * W3)
 
-        # Affine2 backward pass
-        affine2_dx, affine2_dw, affine2_db = affine_backward(soft_grad, cache_affine2)
-        grads['W3'] = affine2_dw + self.reg * W3
-        grads['b3'] = affine2_db
+        # backpropagation of gradients
+        dout, grads['W3'], grads['b3'] = affine_backward(
+            softmax_grad, fc2_cache)
+        dout, grads['W2'], grads['b2'] = affine_relu_backward(dout, fc_cache)
+        dout, grads['W1'], grads['b1'] = conv_relu_pool_backward(dout, cache)
 
-        # Relu2 backward pass
-        relu2_dx = relu_backward(affine2_dx, cache_relu2)
-
-        # Affine1 backward pass
-        affine1_dx, affine1_dw, affine1_db = affine_backward(relu2_dx, cache_affine1)
-        grads['W2'] = affine1_dw + self.reg * W2
-        grads['b2'] = affine1_db
-
-        # MaxPool backward pass
-        max_pool_dx = max_pool_backward_fast(affine1_dx, cache_max_pool)
-
-        # Relu1 backward pass
-        relu1_dx = relu_backward(max_pool_dx, cache_relu1)
-
-        # Convolutional backward pass
-        conv_dx, conv_dw, conv_db = conv_backward_fast(relu1_dx, cache_conv)
-        grads['W1'] = conv_dw + self.reg * W1
-        grads['b1'] = conv_db
+        # L2 regularization
+        grads['W1'] += self.reg * W1
+        grads['W2'] += self.reg * W2
+        grads['W3'] += self.reg * W3
 
 
 
